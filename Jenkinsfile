@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 pipeline{
     agent any 
     stages{
@@ -24,3 +25,18 @@ pipeline{
         }
     }
 }
+=======
+pipeline {
+    agent any   
+    stages {
+        stage('Build') {
+            steps {
+                script{
+                    sh 'chmod +x gradlew'
+                    sh './gradlew build'
+                } 
+            }
+        }
+    }
+}    
+>>>>>>> 283ad4e (jenkinsfile)
