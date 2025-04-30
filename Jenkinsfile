@@ -20,6 +20,25 @@ pipeline {
     }
 
     stages {
+        stage('lint') {
+                    steps {
+                        script {
+                            docker.image('235494802123.dkr.ecr.us-east-1.amazonaws.com/spring-app-lint:latest').inside('--user root') {
+
+                                try {
+                                    sh 'chmod +x lint-all.sh'
+                                    sh './lint-all.sh'
+                                }
+                                catch (err) {
+                                    currentBuild.result = 'UNSTABLE'
+                                    echo 'Please correct linter issues'
+                                    return //  skip waitForQualityGate if gradle failed
+                                }
+                            }
+                        }
+                    }
+        }
+
         stage('Build and Sonar Parallel') {
             parallel {
                 stage('build') {
