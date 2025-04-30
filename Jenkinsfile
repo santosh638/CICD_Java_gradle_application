@@ -20,11 +20,12 @@ pipeline {
     }
 
     stages {
-        stage('lint') {
+        stage('initial checks') {
+            parallel {
+                stage('lint') {
                     steps {
                         script {
                             docker.image('235494802123.dkr.ecr.us-east-1.amazonaws.com/spring-app-lint:latest').inside('--user root') {
-
                                 try {
                                     sh 'chmod +x lint-all.sh'
                                     sh './lint-all.sh'
@@ -37,6 +38,17 @@ pipeline {
                             }
                         }
                     }
+                }
+
+                stage('health-check') {
+                    steps {
+                        script {
+                            sh 'chmod +x health-check.sh'
+                            sh './health-check.sh'
+                        }
+                    }
+                }
+            }
         }
 
         stage('Build and Sonar Parallel') {
@@ -118,10 +130,10 @@ pipeline {
     }
 
     post {
-        always {
-            archiveArtifacts artifacts: 'build/reports/tests/test/**', followSymlinks: false
-            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'build/reports/tests/test/', reportFiles: 'index.html', reportName: 'test-case-report', reportTitles: 'test-case-report', useWrapperFileDirectly: true])
-            cleanWs()
-        }
+            always {
+                archiveArtifacts artifacts: 'build/reports/tests/test/**', followSymlinks: false
+                publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'build/reports/tests/test/', reportFiles: 'index.html', reportName: 'test-case-report', reportTitles: 'test-case-report', useWrapperFileDirectly: true])
+                cleanWs()
+            }
     }
 }
