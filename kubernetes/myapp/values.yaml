@@ -4,7 +4,8 @@
 
 replicaCount: 2
 image:
-  repository: .dkr.ecr..amazonaws.com/spring-app
+  #repository: .dkr.ecr..amazonaws.com/spring-app
+  repository: IMAGE_REPOSITORY
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: IMAGE_TAG

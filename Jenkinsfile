@@ -120,10 +120,10 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        sed -i "s:IMAGE_NAME:${aws_account_id}.dkr.ecr.${aws_region}.amazonaws.com/spring-app:" kubernetes/myapp/values.yaml
+                        sed -i "s:IMAGE_REPOSITORY:${aws_account_id}.dkr.ecr.${aws_region}.amazonaws.com/spring-app:" kubernetes/myapp/values.yaml
                         sed -i "s:IMAGE_TAG:${Docker_tag}:" kubernetes/myapp/values.yaml
                          helm package kubernetes/myapp/
-                         helmversion=$( helm show chart kubernetes/myapp/ | grep version | cut -d: -f 2 | tr -d ' ')
+                         helmversion=$(helm show chart kubernetes/myapp/ | grep version | cut -d: -f 2 | tr -d ' ')
                          aws s3 cp spring-app-$helmversion.tgz s3://nimbuswiztechts3bucket/helm-charts/spring-app-$helmversion.tgz
                     '''
                 }
@@ -157,29 +157,27 @@ pipeline {
         stage('verify app deployment') {
             steps {
                 script {
-                        docker.image('235494802123.dkr.ecr.us-east-1.amazonaws.com/spring-app:deploy').inside('--user root') {
-                            withCredentials([usernamePassword(credentialsId: 'aws-login-creds', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                                sh '''
+                    docker.image('235494802123.dkr.ecr.us-east-1.amazonaws.com/spring-app:deploy').inside('--user root') {
+                        withCredentials([usernamePassword(credentialsId: 'aws-login-creds', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                            sh '''
                             mkdir -p /root/.aws
                             echo "[default]" > /root/.aws/config
                             echo "region = us-east-1" >> /root/.aws/config
                             export AWS_CONFIG_FILE="/root/.aws/config"
                             aws eks update-kubeconfig --region ${aws_region} --name k8s-session
-                            kubectl run curl --image=curlimages/curl -i --rm --restart=Never -- curl myjavaapp-myapp:8080
+                            kubectl run curl --image=curlimages/curl -i --rm --restart=Never -- curl myjavaapp-spring-app:8080
                         '''
-                            }
                         }
-
+                    }
                 }
             }
-
         }
-
+    }
     post {
-            always {
-                archiveArtifacts artifacts: 'build/reports/tests/test/**', followSymlinks: false
-                publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'build/reports/tests/test/', reportFiles: 'index.html', reportName: 'test-case-report', reportTitles: 'test-case-report', useWrapperFileDirectly: true])
-                cleanWs()
-            }
+        always {
+            archiveArtifacts artifacts: 'build/reports/tests/test/**', followSymlinks: false
+            publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'build/reports/tests/test/', reportFiles: 'index.html', reportName: 'test-case-report', reportTitles: 'test-case-report', useWrapperFileDirectly: true])
+            cleanWs()
+        }
     }
 }
