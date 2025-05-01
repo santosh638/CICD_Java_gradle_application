@@ -1,6 +1,8 @@
 def getDockerTag() {
     def tag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-    return tag
+    def timestamp = new Date().format('yyyyMMddHHmmss')
+    return "${tag}-${timestamp}"
+// return tag
 }
 
 def getAwsAccountID() {
@@ -124,6 +126,30 @@ pipeline {
                          helmversion=$( helm show chart kubernetes/myapp/ | grep version | cut -d: -f 2 | tr -d ' ')
                          aws s3 cp spring-app-$helmversion.tgz s3://nimbuswiztechts3bucket/helm-charts/spring-app-$helmversion.tgz
                     '''
+                }
+            }
+        }
+
+        stage('deploy to eks cluster') {
+            steps {
+                script {
+                    dir('kubernetes') {
+                        docker.image('235494802123.dkr.ecr.us-east-1.amazonaws.com/spring-app:deploy').inside('--user root') {
+                            withCredentials([usernamePassword(credentialsId: 'aws-login-creds', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                                sh '''
+                            mkdir -p /root/.aws
+                            echo "[default]" > /root/.aws/config
+                            echo "region = us-east-1" >> /root/.aws/config
+                            export AWS_CONFIG_FILE="/root/.aws/config"
+                            aws eks update-kubeconfig --region ${aws_region} --name k8s-session
+                            helm upgrade --install myjavaapp myapp/
+                            helm list
+                            sleep 120
+                            kubectl get po
+                        '''
+                            }
+                        }
+                    }
                 }
             }
         }
