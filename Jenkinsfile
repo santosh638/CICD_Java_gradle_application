@@ -153,7 +153,27 @@ pipeline {
                 }
             }
         }
-    }
+
+        stage('verify app deployment') {
+            steps {
+                script {
+                        docker.image('235494802123.dkr.ecr.us-east-1.amazonaws.com/spring-app:deploy').inside('--user root') {
+                            withCredentials([usernamePassword(credentialsId: 'aws-login-creds', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                                sh '''
+                            mkdir -p /root/.aws
+                            echo "[default]" > /root/.aws/config
+                            echo "region = us-east-1" >> /root/.aws/config
+                            export AWS_CONFIG_FILE="/root/.aws/config"
+                            aws eks update-kubeconfig --region ${aws_region} --name k8s-session
+                            kubectl run curl --image=curlimages/curl -i --rm --restart=Never -- curl myjavaapp-myapp:8080
+                        '''
+                            }
+                        }
+
+                }
+            }
+
+        }
 
     post {
             always {
